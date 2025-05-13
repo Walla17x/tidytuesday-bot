@@ -1,38 +1,48 @@
-name: Run TidyTuesday Analysis
+name: CI
 
 on:
-  schedule:
-    - cron: '0 14 * * 2'  # Every Tuesday at 9AM Central
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Check out repository
+        uses: actions/checkout@v3
 
-    - name: Set up R
-      uses: r-lib/actions/setup-r@v2
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.2'
 
-    - name: Install R packages
-      run: |
-        Rscript -e 'install.packages(c("tidyverse", "tidytuesdayR", "ggplot2", "skimr", "janitor", "naniar", "lubridate", "DataExplorer", "gt"))'
+      - name: Install dependencies
+        run: |
+          Rscript -e 'install.packages(c("devtools", "testthat"), repos="https://cloud.r-project.org")'
+          Rscript -e 'devtools::install_deps(dependencies = TRUE)'
 
-    - name: Run TidyTuesday script
-      run: |
-        Rscript analysis.R
+      - name: Run tests
+        run: |
+          Rscript -e 'library(testthat); test_dir("tests")'
 
-    - name: Render Quarto Report
-      run: |
-        quarto render weekly_report.qmd
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: tests/_results
 
-    - name: Upload plot, post, and report
-      uses: actions/upload-artifact@v2
-      with:
-        name: tidytuesday-output
-        path: |
-          plot.png
-          post.txt
-          weekly_report.html
+      - name: Upload coverage report
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage/
+
+      - name: Clean up
+        run: echo "Done!"
