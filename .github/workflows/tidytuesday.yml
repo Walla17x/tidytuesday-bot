@@ -1,0 +1,32 @@
+name: Run TidyTuesday Analysis
+
+on:
+  schedule:
+    - cron: '0 14 * * 2'  # Every Tuesday at 9AM Central
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up R
+      uses: r-lib/actions/setup-r@v2
+
+    - name: Install R packages
+      run: |
+        Rscript -e 'install.packages(c("tidyverse", "tidytuesdayR", "ggplot2"))'
+
+    - name: Run TidyTuesday script
+      run: |
+        Rscript analysis.R
+
+    - name: Upload plot and post
+      uses: actions/upload-artifact@v3
+      with:
+        name: tidytuesday-output
+        path: |
+          plot.png
+          post.txt
