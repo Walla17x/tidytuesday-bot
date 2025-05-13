@@ -29,7 +29,7 @@ jobs:
         quarto render weekly_report.qmd
 
     - name: Upload plot, post, and report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: tidytuesday-output
         path: |
