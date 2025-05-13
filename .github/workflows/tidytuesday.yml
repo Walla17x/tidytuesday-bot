@@ -2,7 +2,7 @@ name: Run TidyTuesday Analysis
 
 on:
   schedule:
-    - cron: '0 14 * * 2'  # Every Tuesday at 9AM Central
+    - cron: '0 14 * * 2'
   workflow_dispatch:
 
 jobs:
