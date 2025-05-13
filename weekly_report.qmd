@@ -1,0 +1,188 @@
+---
+title: "📊 TidyTuesday Executive EDA Report"
+author: "Automated AI Assistant"
+format: html
+editor: visual
+---
+
+```{r}
+#| label: setup
+# Load required packages
+library(tidyverse)
+library(tidytuesdayR)
+library(skimr)
+library(janitor)
+library(naniar)
+library(lubridate)
+library(DataExplorer)
+library(gt)
+```
+
+## 🧠 Dataset Initialization
+
+```{r}
+# Load this week's dataset
+tt_data <- tt_load(week = NULL)
+df_name <- names(tt_data)[1]
+df <- tt_data[[df_name]]
+df <- clean_names(df)
+
+# Identify variable types
+num_vars <- df %>% select(where(is.numeric))
+cat_vars <- df %>% select(where(is.character))
+date_vars <- df %>% select(where(lubridate::is.Date))
+```
+
+## 📋 Executive Summary
+
+```{r}
+summary_tbl <- tibble(
+  Dataset = df_name,
+  Rows = nrow(df),
+  Columns = ncol(df),
+  Numeric_Vars = ncol(num_vars),
+  Categorical_Vars = ncol(cat_vars),
+  Missing_Cells = sum(is.na(df)),
+  Complete_Cases = sum(complete.cases(df))
+)
+
+summary_tbl %>% gt()
+```
+
+---
+
+## 🧾 Data Dictionary
+
+```{r}
+skimr::skim(df)
+```
+
+---
+
+## 🔍 Missing Data Profile
+
+```{r}
+vis_miss(df)
+```
+
+---
+
+## 📊 Numeric Distribution Profiles
+
+```{r}
+df %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(cols = everything()) %>%
+  ggplot(aes(value)) +
+  facet_wrap(~ name, scales = "free", ncol = 3) +
+  geom_histogram(fill = "steelblue", bins = 30) +
+  theme_minimal() +
+  labs(title = "Distributions of Numeric Variables")
+```
+
+---
+
+## 📈 Categorical Frequency Profiles
+
+```{r}
+df %>%
+  select(where(is.character)) %>%
+  pivot_longer(cols = everything()) %>%
+  count(name, value, sort = TRUE) %>%
+  group_by(name) %>%
+  slice_max(n, n = 10) %>%
+  ggplot(aes(x = reorder(value, n), y = n)) +
+  geom_col(fill = "darkorange") +
+  facet_wrap(~ name, scales = "free") +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = "Top Categories by Frequency", x = NULL, y = "Count")
+```
+
+---
+
+## 📅 Time-Series Detection (if applicable)
+
+```{r}
+possible_dates <- df %>% select(where(lubridate::is.Date))
+if (ncol(possible_dates) > 0) {
+  df %>%
+    mutate(across(where(lubridate::is.Date), ~ as.Date(.))) %>%
+    count(!!sym(names(possible_dates)[1])) %>%
+    ggplot(aes(x = !!sym(names(possible_dates)[1]), y = n)) +
+    geom_line(color = "purple") +
+    theme_minimal() +
+    labs(title = "Detected Time Series Trends")
+}
+```
+
+---
+
+## 🧬 Correlation Matrix (Numeric)
+
+```{r}
+if (ncol(num_vars) > 1) {
+  num_vars %>%
+    cor(use = "pairwise.complete.obs") %>%
+    as.data.frame() %>%
+    rownames_to_column() %>%
+    pivot_longer(-rowname, names_to = "variable", values_to = "correlation") %>%
+    ggplot(aes(x = rowname, y = variable, fill = correlation)) +
+    geom_tile() +
+    scale_fill_gradient2(low = "red", high = "blue", mid = "white", midpoint = 0) +
+    theme_minimal() +
+    labs(title = "Correlation Matrix of Numeric Variables")
+}
+```
+
+---
+
+## 🧠 Preliminary Variable Influence Analysis
+
+```{r}
+# Rank numeric variables by standard deviation as proxy for signal
+df %>%
+  summarise(across(where(is.numeric), sd, na.rm = TRUE)) %>%
+  pivot_longer(cols = everything()) %>%
+  arrange(desc(value)) %>%
+  slice_head(n = 10) %>%
+  ggplot(aes(x = reorder(name, value), y = value)) +
+  geom_col(fill = "forestgreen") +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = "Top Influential Numeric Variables (by Std Dev)", x = "Variable", y = "Std Dev")
+```
+
+---
+
+## 🤖 Suggested Modeling Strategies
+
+```{r}
+cat("Based on this week's data structure:\n\n")
+
+if (ncol(num_vars) >= 3) {
+  cat("- ✅ Try unsupervised clustering (KMeans or DBSCAN) to detect patterns\n")
+}
+if ("category" %in% names(df) || "type" %in% names(df)) {
+  cat("- ✅ Classification may be appropriate — consider XGBoost or Random Forest\n")
+}
+if (sum(grepl("date|time", names(df))) > 0) {
+  cat("- ✅ Time series structure detected — explore temporal modeling or forecasting\n")
+}
+if (sum(is.na(df)) > 0) {
+  cat("- ⚠️ Consider imputation strategies before modeling\n")
+}
+cat("\n\nUse this report to direct downstream modeling requests.\n")
+```
+
+---
+
+## 💡 AI Instructions (Send This to ChatGPT)
+
+```
+AI Modeling Agent Input:
+- Use this week's dataset
+- Prioritize variables showing highest signal
+- Recommend or build: unsupervised clusters, classification targets, anomaly detection, or feature selection
+- Output full R modeling script with brief executive explanation and summary visuals
+```
