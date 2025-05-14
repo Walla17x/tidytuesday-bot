@@ -1,0 +1,34 @@
+name: Render Weekly Report
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  render-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-action@v2
+
+      - name: Install R dependencies
+        run: |
+          Rscript -e 'install.packages(c("tidyverse", "quarto"), repos="https://cloud.r-project.org")'
+
+      - name: Render weekly_report.qmd
+        run: |
+          quarto render weekly_report.qmd \
+            --to html \
+            --output weekly_report.html
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-report
+          path: weekly_report.html
