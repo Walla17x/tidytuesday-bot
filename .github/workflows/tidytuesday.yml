@@ -1,1 +1,49 @@
-<paste the YAML above>
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.2'
+
+      - name: Install test dependencies
+        run: |
+          Rscript -e 'install.packages("testthat", repos="https://cloud.r-project.org")'
+          # If your tests use other packages, add them here, e.g.:
+          # Rscript -e 'install.packages(c("dplyr","ggplot2"), repos="https://cloud.r-project.org")'
+
+      - name: Run tests if present
+        run: |
+          if [ -d tests ] && ls tests/*-test.R >/dev/null 2>&1; then
+            Rscript -e 'library(testthat); test_dir("tests")'
+          else
+            echo "No tests found—skipping."
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: tests/_results
+
+      - name: Clean up
+        run: echo "✅ CI finished without fatal errors."
+
+
