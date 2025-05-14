@@ -22,10 +22,11 @@ jobs:
         with:
           r-version: '4.2'
 
-      - name: Install dependencies
+      - name: Install test dependencies
         run: |
-          Rscript -e 'install.packages(c("remotes", "testthat"), repos="https://cloud.r-project.org")'
-          Rscript -e 'remotes::install_deps(dependencies = TRUE)'
+          Rscript -e 'install.packages(c("testthat"), repos="https://cloud.r-project.org")'
+          # If your tests use dplyr, ggplot2, etc., add them here:
+          # Rscript -e 'install.packages(c("dplyr","ggplot2"), repos="https://cloud.r-project.org")'
 
       - name: Run tests
         run: |
@@ -37,13 +38,6 @@ jobs:
         with:
           name: test-results
           path: tests/_results
-
-      - name: Upload coverage report
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage/
 
       - name: Clean up
         run: echo "Done!"
